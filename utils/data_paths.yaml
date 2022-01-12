@@ -1,0 +1,20 @@
+#
+# Description: paths used across the pipeline
+
+data_intake:
+  # script
+  train_data: "/a_data_intake/_input_data/train.csv"
+  test_data: "/a_data_intake/_input_data/test.csv"
+
+data_prep:
+  # script
+  transform_data: "/b_data_prep/transform_var.py"
+
+modeling:
+  variable_selection: "/c_modeling/variable_selection.py"
+  model_selection: "/c_modeling/model_selection.py"
+  run_models: "/c_modeling/run_models.py"
+
+model_evaluation:
+
+model_deployment:
