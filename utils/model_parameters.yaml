@@ -1,0 +1,33 @@
+#
+# Description: paths used across the pipeline
+
+# data prep
+split_size: 0.2 # size of train-validation split
+imputers: ['knn','mode', 'hot_deck', 'linear_reg']
+knn_params: ['']
+knn_vars: ['Year_Factor','floor_area', 'year_built', 'ELEVATION','january_avg_temp',
+            'february_avg_temp','march_avg_temp','april_avg_temp', 
+            'may_avg_temp','june_avg_temp', 'july_avg_temp','august_avg_temp',
+            'september_avg_temp', 'october_avg_temp', 'november_avg_temp', 'december_avg_temp']
+outlier_removers: ['capping', 'NA', 'remove']
+cap_group: ['Year_Factor']
+transformers: ['one_hot_encode', 'label_encode', 'var_binning', 'var_scaling']
+var_bin_info : 5
+use_outlier_scaling: False
+
+# model params
+cross_valid_num : 6
+decision_params: {"min_samples_leaf": [1, 10, 50, 100, 200, 300], 
+                   "max_depth":[1, 5, 10, 15, 20]}
+
+randomforest_params: {"min_samples_leaf": [1, 10, 50, 100, 200, 300], 
+                   "max_depth":[1, 5, 10, 15, 20],
+                   "n_estimators":[10, 20, 50, 100]}
+
+ada_params: {"base_estimator": [DecisionTreeRegressor()], 
+                   "n_estimators":[10, 20, 50, 100],
+                   "learning_rate":[1, 2, 3, 4, 5]}
+
+knn_params: {"n_neighbors":[1,2,3,4,5,6,7,8,9,10]}
+
+linear_params: {"n_neighbors":[1,2,3,4,5,6,7,8,9,10]}
