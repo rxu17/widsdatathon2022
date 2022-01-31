@@ -1,86 +1,92 @@
-##################################################################################
-# Name of Script: remove_outliers.R
-# Description: This code will detect outliers and deal with it in one of a few 
-#               ways: 
-#               - turn them into NAs (and let impute missing handle)
-#               - capping outliers, for outside 1.5 * IQR limits, we use 
-#                 5 percentile for lower limit and 95% percentile for upper limit
-#               
-# Arguments: N/A
-# Output: 
-# Contributors: rxu17
-###################################################################################
+'''
+Description: This script models
 
-#############################
-# DEFINE PARAMETERS         #
-#############################
-# set working directories by operating system
-rm(list=ls())
-user <- Sys.info()[["user"]]
+Can try ensemble modeling where 100 models are generated and averaged
 
-##################################
-# DEFINE LIBRARIES AND FUNCTIONS #
-##################################
-pacman::p_load(data.table, tidyr)
+Arguments: None
+How To Use: import 
+Contributors: rxu17
+'''
+import os
+import sys
+import pandas as pd
+import numpy as np
+from sklearn.impute import KNNImputer
+#from sklearn.impute import IterativeImputer
 
-detect_outliers <- function(input_df, dep_var, predictors = c()){
-    # This method uses various outlier detection methods
-    #
-    # Parameters: 
-    #   input_df: data.table
-    #   dep_var: str, dependent variable of model
-    #   predictors: list, list of predictor var to use in outlier model
-    #
-    # Returns: data.table with indicator of which row and col had the outlier
+PROJECT_ROOT = os.path.abspath(os.path.join(
+                  os.path.dirname(__file__), 
+                  os.pardir)
+)
+sys.path.append(PROJECT_ROOT)
 
-    # we predict on the dep_var using our list of predictors
-    if(length(predictors) == 0) formula <- "{dep_var} ~ ." %>% glue
-    else formula <- paste0("{dep_var} ~", paste0(predictors, collapse = " + ")) %>% glue
-    mod <- lm(formula, data = input_df)
-    cooksd <- cooks.distance(mod)
+from utils.tests import *
 
-    # plot cook's distance
-    plot(cooksd, pch = "*", cex = 2, main="Influential Obs by Cooks distance")  
-    abline(h = 4 * mean(cooksd, na.rm = T), col="red")  # add cutoff line
-    text(x = 1:length(cooksd)+1, y = cooksd, 
-        labels=ifelse(cooksd > 4 * mean(cooksd, na.rm = T), names(cooksd),""), col = "red")  # add labels
-
-    # threshold is 4* line
-    input_df[, is_outlier := ifelse(cookds, 1, 0)]
-    return(input_df)
-}
+def detect_outliers(input : pd.DataFrame, out_var : list, 
+                    detect_method : str) -> pd.DataFrame:
+    ''' iqr method (Q1 - 1.5* IQR) (Q3 + 1.5* IQR)
+    '''
+    print("Preparing for outlier detecting ...")
+    if detect_method == "iqr":
+        # IQR
+        Q1 = np.percentile(input[out_var], 25,
+                        interpolation = 'midpoint')
+        Q3 = np.percentile(input[out_var], 75,
+                        interpolation = 'midpoint')
+        IQR = Q3 - Q1
+        input['is_upper_out'] = np.where(input[out_var] >= (Q3+1.5*IQR), 1, 0)
+        input['is_lower_out'] = np.where(input[out_var] <= (Q1-1.5*IQR), 1, 0)
+        input['is_out'] = np.where((input['is_upper_out']==1)|(input['is_lower_out']==1), 1, 0)
+    return(input)
+        
 
 
-treat_outliers <- function(input_df, out_method = "NA", cols_to_treat){
-    # This method uses various outlier treatment methods to 
-    # deal with the outliers detected from detect_outliers function
-    #
-    # Parameters:
-    #   input_df: data.table, subset of original data with outliers
-    #   out_method: str, ['NA', 'cap', 'removal'],
-    #                NA - converts all rows to NA
-    #                cap - takes 95% and 5% quntiles of our data, and 
-    #                      caps our data at those values
-    #                removal - removes those rows completely
-    #   cols_to_treat: vector, cols that have outliers we want to handle
-    # 
-    # Returns: data.table of treated dataframe
+def create_and_apply_caps(input_df, cap_type, out_var):
+    '''
+    '''
+    print("Creating caps ...")
+    # define cap quantiles
+    cap_type_val = {"upper_cap":0.975, "lower_cap":0.025}
+    cap_group = get_model_param("cap_group")
+    caps = input_df.groupby(cap_group).quantile(cap_type_val[cap_type]).reset_index()
+    # merge in caps
+    caps.rename({out_var:"{}_{}".format(out_var, cap_type)}, axis = 1, inplace = True)
+    input_w_cap = input_df.merge(caps[["{}_{}".format(out_var, cap_type)] + cap_group], 
+                                  on = cap_group, how = "left")
+    # apply caps
+    print("Applying caps ...")
+    out_type = cap_type.split("_")[0]
+    input_w_cap[out_var] = np.where(input_w_cap['is_{}_out'.format(out_type)]==1, 
+                            input_w_cap["{}_{}".format(out_var, cap_type)], input_w_cap[out_var])
+    input_w_cap = input_w_cap.drop("{}_{}".format(out_var, cap_type), axis = 1)
+    return(input_w_cap)
 
-    if(out_method == "NA"){
-        input_df[, (cols_to_treat) := NA] 
-    } else if (out_method == "cap"){
-        # cap the data using caps at 5% and 95% quantiles of our data
-        input_df[, .(lower_cap) = lapply(.SD, FUN = quantile(probs = 0.05)), 
-                                                        .SDcols = cols_to_treat]
-        input_df[, .(upper_cap) = lapply(.SD, FUN = quantile(probs = 0.95)), 
-                                                        .SDcols = cols_to_treat]
-        input_df[, lapply(.SD, function(x) ifelse(x > upper_cap, upper_cap, 
-                                           ifelse(x < lower_cap, lower_cap, x))), 
-                                           .SDcols = cols_to_treat]       
-    } else if (out_method == "removal"){
-        # completely remove rows of data
-        input_df <- input_df[]
-    }
-    return(input_df)
-}
 
+def run(input : pd.DataFrame, out_vars : list = None, 
+        out_remover : list = None) -> pd.DataFrame:
+    ''' Select imputation method:
+            capping - takes 95% and 5% quntiles of our data by group of vars, and 
+                          caps our data at those values
+            removal - removes those rows completely
+            NA - converts all rows to NA
+    '''
+    assert set(out_remover) <= set(get_model_param("outlier_removers"))
+    if out_vars is None and out_remover is None:
+        return(input)
+    # call outlier remover
+    out_dict = {out_vars[i]:out_remover[i] for i in range(len(out_vars))}
+    updated = input.copy()
+    for out_var, out_remover in out_dict.items():
+        updated = detect_outliers(updated, out_var,detect_method="iqr")
+        if out_remover == "capping":
+            updated = create_and_apply_caps(updated, "upper_cap", out_var)
+            updated = create_and_apply_caps(updated, "lower_cap", out_var)
+            updated = updated.drop(['is_out', 'is_lower_out', 'is_upper_out'], axis = 1)
+        elif out_remover == "NA":
+            updated.loc[updated['is_out']==1, out_var] = np.NaN
+        elif out_remover == "removal":
+            updated = updated.loc[updated['is_out']==0]
+    
+    print("Outlier removal completed!")
+    test_zero_inf_null_vals(table = updated, vars = out_vars)
+    return(updated)
