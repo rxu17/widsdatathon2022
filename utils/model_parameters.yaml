@@ -2,6 +2,8 @@
 # Description: paths used across the pipeline
 
 # data prep
+target_var: ["site_eui"]
+id_vars: ['id']
 split_size: 0.2 # size of train-validation split
 imputers: ['knn','mode', 'hot_deck', 'linear_reg']
 knn_params: ['']
@@ -16,7 +18,7 @@ var_bin_info : 5
 use_outlier_scaling: False
 
 # model params
-cross_valid_num : 6
+cross_validate_num : 6
 decision_params: {"min_samples_leaf": [1, 10, 50, 100, 200, 300], 
                    "max_depth":[1, 5, 10, 15, 20]}
 

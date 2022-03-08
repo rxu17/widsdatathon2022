@@ -23,7 +23,7 @@ from utils.tests import *
 
 
 def run(input : pd.DataFrame, impute_vars : list = None, 
-        imputer : list = None) -> pd.DataFrame:
+        imputer : list = None, is_test : bool = False) -> pd.DataFrame:
     ''' Select imputation method:
             knn - k nearest neighbors
             mode - fill with frequent value
@@ -39,6 +39,9 @@ def run(input : pd.DataFrame, impute_vars : list = None,
     updated = input.copy()
     print("Running imputer ...")
     for impute_var, imputer in impute_dict.items():
+        if is_test and set([impute_var]) == set(get_model_param("target_var")):
+            impute_vars = list(set(impute_vars) - set([impute_var]))
+            continue
         if imputer == "knn":
             helper_vars = get_model_param("knn_vars")
             knn = KNNImputer(n_neighbors=5, weights="uniform")

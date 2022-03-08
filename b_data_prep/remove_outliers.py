@@ -22,6 +22,7 @@ sys.path.append(PROJECT_ROOT)
 
 from utils.tests import *
 
+
 def detect_outliers(input : pd.DataFrame, out_var : list, 
                     detect_method : str) -> pd.DataFrame:
     ''' iqr method (Q1 - 1.5* IQR) (Q3 + 1.5* IQR)
@@ -39,7 +40,6 @@ def detect_outliers(input : pd.DataFrame, out_var : list,
         input['is_out'] = np.where((input['is_upper_out']==1)|(input['is_lower_out']==1), 1, 0)
     return(input)
         
-
 
 def create_and_apply_caps(input_df, cap_type, out_var):
     '''
@@ -63,7 +63,7 @@ def create_and_apply_caps(input_df, cap_type, out_var):
 
 
 def run(input : pd.DataFrame, out_vars : list = None, 
-        out_remover : list = None) -> pd.DataFrame:
+        out_remover : list = None, is_test : bool = False) -> pd.DataFrame:
     ''' Select imputation method:
             capping - takes 95% and 5% quntiles of our data by group of vars, and 
                           caps our data at those values
@@ -77,6 +77,9 @@ def run(input : pd.DataFrame, out_vars : list = None,
     out_dict = {out_vars[i]:out_remover[i] for i in range(len(out_vars))}
     updated = input.copy()
     for out_var, out_remover in out_dict.items():
+        if is_test and set([out_var]) == set(get_model_param("target_var")):
+            out_vars = list(set(out_vars) - set([out_var]))
+            continue
         updated = detect_outliers(updated, out_var,detect_method="iqr")
         if out_remover == "capping":
             updated = create_and_apply_caps(updated, "upper_cap", out_var)

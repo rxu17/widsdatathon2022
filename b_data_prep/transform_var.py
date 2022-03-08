@@ -102,7 +102,7 @@ def variable_scaling(input_df, scale_var, use_outlier_scaling):
     return(scaled_df)
 
 
-def run(input, trans_vars, transformer):
+def run(input, trans_vars, transformer, is_test : bool = False):
     '''
     '''
     assert set(transformer) <= set(get_model_param("transformers"))
@@ -114,6 +114,9 @@ def run(input, trans_vars, transformer):
     updated_df = input.copy()
     print("Running transformer ...")
     for trans_var, transformer in trans_dict.items():
+        if is_test and set([trans_var]) == set(get_model_param("target_var")):
+            trans_vars = list(set(trans_vars) - set([trans_var]))
+            continue
         if transformer == "one_hot_encode":
             updated_df = one_hot_encoding(updated_df, trans_var)
         elif transformer == "label_encode":

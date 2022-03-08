@@ -25,7 +25,7 @@ sys.path.append(PROJECT_ROOT)
 from utils.tests import *
 
 
-def run(input : pd.DataFrame, selected_vars : list) -> pd.DataFrame:
+def run(input : pd.DataFrame, selected_vars : list, is_test : bool = False) -> pd.DataFrame:
     ''' Special key words for selected_vars
         selected_vars:
             Allowed values: variables in input, 
@@ -33,6 +33,7 @@ def run(input : pd.DataFrame, selected_vars : list) -> pd.DataFrame:
             avg_temp, min_temp, max_temp, _degree, below_ - only select variables with this substring
             all - selected all available variables
             non_tmp - selects all non temperature related variables
+        is_test: whether this is test data or not
     '''
     spe_vars =  ['avg_temp','min_temp', 'max_temp', '_degree', 'below_', 'all', 'non_tmp']
     tmp_vars = ['avg_temp','min_temp', 'max_temp', '_degree', 'below_']
@@ -49,6 +50,11 @@ def run(input : pd.DataFrame, selected_vars : list) -> pd.DataFrame:
             else: # include only subset based on specified prefix/suffix
                 selected_vars += [var for var in input.columns if spe_var in var]
     
+    # reattach the target var variable and id vars
+    target_var = get_model_param("target_var") if not is_test else []
+    id_vars = get_model_param("id_vars")
+    selected_vars = list(set(selected_vars) - set(id_vars + get_model_param("target_var")))
     test_var_in_table(table = input, vars = list(set(selected_vars)))
-    input = input[list(set(selected_vars))]
+
+    input = input[list(set(selected_vars + id_vars + target_var))]
     return(input)

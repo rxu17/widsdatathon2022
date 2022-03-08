@@ -29,20 +29,19 @@ import numpy as np
 import matplotlib.pyplot as pyplot
 from sklearn import preprocessing
 
-# import data prep steps
-import select_var as select
-import impute_missing as impute
-import remove_outliers as remove_out
-import transform_var as trans_var
-# for splitting data
-from sklearn.model_selection import train_test_split
-
 PROJECT_ROOT = os.path.abspath(os.path.join(
                   os.path.dirname(__file__), 
                   os.pardir)
 )
 sys.path.append(PROJECT_ROOT)
 
+# import data prep steps
+import b_data_prep.select_var as select
+import b_data_prep.impute_missing as impute
+import b_data_prep.remove_outliers as remove_out
+import b_data_prep.transform_var as trans_var
+# for splitting data
+from sklearn.model_selection import train_test_split
 from utils.tests import *
 
 
@@ -97,17 +96,17 @@ def main_test(args):
     return(transformed)
 
 
-def run_data_prep(input_df, args):
+def run_data_prep(input_df, args, is_test):
     ''' Run the steps
     '''
     selected = select.run(input = input_df, 
-                          selected_vars = args['selected_vars'])
+                          selected_vars = args['selected_vars'], is_test = is_test)
     removed = remove_out.run(input = selected, out_vars = args['outlier_vars'], 
-                             out_remover = args['outlier_methods'])
+                             out_remover = args['outlier_methods'], is_test = is_test)
     imputed = impute.run(input = removed, impute_vars = args['impute_vars'], 
-                         imputer = args['imputer_methods'])
+                         imputer = args['imputer_methods'], is_test = is_test)
     transformed = trans_var.run(input = imputed, trans_vars= args['transform_vars'], 
-                                transformer= args['transform_methods'])
+                                transformer= args['transform_methods'], is_test = is_test)
     return(transformed)
 
 
@@ -115,7 +114,7 @@ def main(args):
     ''' Run for train, validation and test datasets
     '''
     train_df, valid_df, test_df = read_and_format_data()
-    prepped_train = run_data_prep(train_df, args)
-    prepped_valid = run_data_prep(valid_df, args)
-    prepped_test = run_data_prep(test_df, args)
+    prepped_train = run_data_prep(train_df, args, is_test = False)
+    prepped_valid = run_data_prep(valid_df, args, is_test = False)
+    prepped_test = run_data_prep(test_df, args, is_test = True)
     return(prepped_train, prepped_valid, prepped_test)

@@ -29,6 +29,7 @@ sys.path.append(PROJECT_ROOT)
 
 from utils.tests import *
 
+
 def find_best_model_params(model : object, train_feat : pd.DataFrame,
                            train_target : pd.DataFrame, hyperparams : dict,
                            cv : int) -> dict:
@@ -174,7 +175,7 @@ def train_and_evaluate_model(model : object,
 
 
 
-def run(train : pd.Dataframe, valid : pd.Dataframe, model : str, 
+def run(train : pd.DataFrame, valid : pd.DataFrame, model : str, 
         best_features : list):
     '''
     '''
@@ -198,3 +199,4 @@ def run(train : pd.Dataframe, valid : pd.Dataframe, model : str,
                                     run_test = False,
                                     return_pred = True)
     return(pred)
+
